@@ -1,0 +1,10 @@
+{
+  "block.pocketrealms.pocket_anchor": "Pocket Anchor",
+  "block.pocketrealms.pocket_gateway": "Pocket Gateway",
+  "item.pocketrealms.pocket_anchor": "Pocket Anchor",
+  "item.pocketrealms.pocket_gateway": "Pocket Gateway",
+  "tooltip.pocketrealms.anchor.line1": "Right-click to enter your portable 30x30 home.",
+  "tooltip.pocketrealms.anchor.line2": "First placement claims one of your five pocket slots. Break it to carry it again.",
+  "itemGroup.pocketrealms": "Pocket Realms",
+  "tooltip.pocketrealms.anchor.bound": "Bound to pocket plot #%s. Place it again to return to this same home."
+}
