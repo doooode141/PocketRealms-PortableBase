@@ -1,0 +1,12 @@
+POCKET REALMS - CHANGELOG
+
+0.1.0-alpha
+- First source release.
+- One shared pocket dimension; player pockets are spaced 300 blocks apart.
+- Five pockets per player, each with a 30x30 usable build floor.
+- Bound portable anchors, recovery command, and free in-pocket gateways.
+- Void-fall safety return.
+- Basic per-player plot interaction protection.
+- Cheap vanilla-material recipes.
+
+This alpha source has not yet been compiled or tested in Minecraft.
