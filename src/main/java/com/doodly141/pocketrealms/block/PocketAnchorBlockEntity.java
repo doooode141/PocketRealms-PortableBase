@@ -2,14 +2,13 @@ package com.doodly141.pocketrealms.block;
 
 import com.doodly141.pocketrealms.data.PocketWorldData;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,6 +33,15 @@ public class PocketAnchorBlockEntity extends BlockEntity {
         return pocketId >= 0 && owner != null;
     }
 
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level instanceof ServerLevel serverLevel && isBound()) {
+            // Register legacy anchors as their chunks load so middle-click copies are rejected.
+            PocketWorldData.get(serverLevel).registerAnchor(owner, pocketId, serverLevel, worldPosition);
+        }
+    }
+
     public void bind(UUID owner, int pocketId) {
         this.owner = owner;
         this.pocketId = pocketId;
@@ -44,28 +52,38 @@ public class PocketAnchorBlockEntity extends BlockEntity {
     }
 
     public void initializeFromItem(ItemStack stack, ServerPlayer placer, ServerLevel serverLevel) {
+        PocketWorldData data = PocketWorldData.get(serverLevel);
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
         if (customData != null) {
             CompoundTag tag = customData.copyTag();
-            if (tag.contains("pocket_id") && tag.contains("owner")) {
+            if (tag.contains("pocket_id") || tag.contains("owner")) {
                 try {
                     int storedId = tag.getInt("pocket_id");
                     UUID storedOwner = UUID.fromString(tag.getString("owner"));
-                    if (storedId >= 0) {
+                    if (storedId >= 0 && storedOwner.equals(placer.getUUID())
+                            && data.ownsPocket(storedOwner, storedId)
+                            && !data.isAnchorActive(storedId)) {
                         bind(storedOwner, storedId);
+                        data.registerAnchor(storedOwner, storedId, serverLevel, worldPosition);
                         return;
                     }
                 } catch (IllegalArgumentException ignored) {
-                    // Invalid item data is treated as a new, unbound anchor.
+                    // Invalid identity data is rejected; it must not silently claim a new home.
                 }
+                placer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                        "This Pocket Anchor identity is invalid, belongs to another player, or is already placed."
+                ));
+                return;
             }
         }
 
-        int allocated = PocketWorldData.get(serverLevel).allocatePocket(placer.getUUID());
+        int allocated = data.allocatePocket(placer.getUUID());
         if (allocated >= 0) {
             bind(placer.getUUID(), allocated);
+            data.registerAnchor(placer.getUUID(), allocated, serverLevel, worldPosition);
             placer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "Pocket Anchor claimed: Pocket " + (PocketWorldData.get(serverLevel).getOwnedPockets(placer.getUUID()).indexOf(allocated) + 1) + "/5."
+                    "Pocket Anchor claimed: " + data.getHomeName(placer.getUUID(), allocated)
+                            + " (" + (data.getOwnedPockets(placer.getUUID()).indexOf(allocated) + 1) + "/5)."
             ));
         } else {
             placer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
@@ -75,15 +93,24 @@ public class PocketAnchorBlockEntity extends BlockEntity {
     }
 
     public ItemStack createBoundItem() {
-        return createBoundItem(owner, pocketId);
+        String name = "Home";
+        if (level instanceof ServerLevel serverLevel && isBound()) {
+            name = PocketWorldData.get(serverLevel).getHomeName(owner, pocketId);
+        }
+        return createBoundItem(owner, pocketId, name);
     }
 
     public static ItemStack createBoundItem(UUID owner, int pocketId) {
+        return createBoundItem(owner, pocketId, "Home");
+    }
+
+    public static ItemStack createBoundItem(UUID owner, int pocketId, String homeName) {
         ItemStack stack = new ItemStack(ModItems.POCKET_ANCHOR.get());
         if (owner != null && pocketId >= 0) {
             CompoundTag tag = new CompoundTag();
             tag.putInt("pocket_id", pocketId);
             tag.putString("owner", owner.toString());
+            tag.putString("home_name", homeName == null || homeName.isBlank() ? "Home" : homeName);
             stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         }
         return stack;
@@ -93,15 +120,13 @@ public class PocketAnchorBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putInt("pocket_id", pocketId);
-        if (owner != null) {
-            tag.putString("owner", owner.toString());
-        }
+        if (owner != null) tag.putString("owner", owner.toString());
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        pocketId = tag.getInt("pocket_id");
+        pocketId = tag.contains("pocket_id") ? tag.getInt("pocket_id") : -1;
         owner = null;
         if (tag.contains("owner")) {
             try {

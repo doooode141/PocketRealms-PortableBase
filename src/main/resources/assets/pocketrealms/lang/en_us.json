@@ -1,10 +1,10 @@
 {
   "block.pocketrealms.pocket_anchor": "Pocket Anchor",
-  "block.pocketrealms.pocket_gateway": "Pocket Gateway",
+  "block.pocketrealms.pocket_gateway": "Dimension Shift Console",
   "item.pocketrealms.pocket_anchor": "Pocket Anchor",
-  "item.pocketrealms.pocket_gateway": "Pocket Gateway",
-  "tooltip.pocketrealms.anchor.line1": "Right-click to enter your portable 30x30 home.",
-  "tooltip.pocketrealms.anchor.line2": "First placement claims one of your five pocket slots. Break it to carry it again.",
-  "itemGroup.pocketrealms": "Pocket Realms",
-  "tooltip.pocketrealms.anchor.bound": "Bound to pocket plot #%s. Place it again to return to this same home."
+  "item.pocketrealms.pocket_gateway": "Dimension Shift Console",
+  "tooltip.pocketrealms.anchor.line1": "A portable key to your own pocket home.",
+  "tooltip.pocketrealms.anchor.line2": "Place to claim a home. Break it to carry the same home again.",
+  "tooltip.pocketrealms.anchor.bound": "Bound to home slot #%s.",
+  "itemGroup.pocketrealms": "Pocket Realms"
 }

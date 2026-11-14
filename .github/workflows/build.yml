@@ -3,7 +3,7 @@ name: Build Pocket Realms
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'upgrade/**']
   workflow_dispatch:
 
 permissions:

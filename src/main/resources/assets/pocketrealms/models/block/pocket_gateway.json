@@ -1,4 +1,9 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": { "all": "minecraft:block/crying_obsidian" }
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "side": "pocketrealms:block/pocket_anchor_metal",
+    "top": "pocketrealms:block/pocket_gateway_panel",
+    "bottom": "pocketrealms:block/pocket_anchor_metal",
+    "particle": "pocketrealms:block/pocket_gateway_panel"
+  }
 }

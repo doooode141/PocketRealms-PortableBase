@@ -2,7 +2,6 @@ package com.doodly141.pocketrealms.block;
 
 import com.doodly141.pocketrealms.PocketRealms;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
@@ -14,7 +13,8 @@ public final class ModItems {
 
     public static final DeferredItem<PocketAnchorItem> POCKET_ANCHOR = ITEMS.register(
             "pocket_anchor",
-            () -> new PocketAnchorItem(ModBlocks.POCKET_ANCHOR.get(), new Item.Properties().stacksTo(1))
+            () -> new PocketAnchorItem(ModBlocks.POCKET_ANCHOR.get(),
+                    new Item.Properties().stacksTo(1).fireResistant())
     );
 
     public static final DeferredItem<BlockItem> POCKET_GATEWAY = ITEMS.register(
