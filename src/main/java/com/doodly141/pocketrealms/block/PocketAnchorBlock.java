@@ -68,11 +68,11 @@ public class PocketAnchorBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && !player.isCreative()
                 && level.getBlockEntity(pos) instanceof PocketAnchorBlockEntity blockEntity) {
             Block.popResource(level, pos, blockEntity.createBoundItem());
         }
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 }
