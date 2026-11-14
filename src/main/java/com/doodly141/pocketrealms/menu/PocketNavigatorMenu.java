@@ -2,6 +2,7 @@ package com.doodly141.pocketrealms.menu;
 
 import com.doodly141.pocketrealms.data.PocketWorldData;
 import com.doodly141.pocketrealms.travel.PocketTravel;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleContainer;
@@ -69,21 +70,21 @@ public class PocketNavigatorMenu extends AbstractContainerMenu {
                 int id = owned.get(slot);
                 String name = data.getHomeName(player.getUUID(), id);
                 ItemStack icon = new ItemStack(icons[slot]);
-                icon.setHoverName(Component.literal((id == currentId ? "§b★ " : "§f") + name));
+                icon.set(DataComponents.CUSTOM_NAME, Component.literal((id == currentId ? "§b★ " : "§f") + name));
                 buttons.setItem(10 + slot, icon);
             } else {
                 ItemStack locked = new ItemStack(Items.GRAY_DYE);
-                locked.setHoverName(Component.literal("§8Home " + (slot + 1) + " — Locked"));
+                locked.set(DataComponents.CUSTOM_NAME, Component.literal("§8Home " + (slot + 1) + " — Locked"));
                 buttons.setItem(10 + slot, locked);
             }
         }
 
         ItemStack returnButton = new ItemStack(Items.ENDER_PEARL);
-        returnButton.setHoverName(Component.literal("§bRETURN TO LAST LOCATION"));
+        returnButton.set(DataComponents.CUSTOM_NAME, Component.literal("§bRETURN TO LAST LOCATION"));
         buttons.setItem(22, returnButton);
 
         ItemStack closeButton = new ItemStack(Items.BARRIER);
-        closeButton.setHoverName(Component.literal("§cCLOSE"));
+        closeButton.set(DataComponents.CUSTOM_NAME, Component.literal("§cCLOSE"));
         buttons.setItem(26, closeButton);
         broadcastChanges();
     }

@@ -103,7 +103,7 @@ public class PocketAnchorItem extends BlockItem {
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
         if (entity.level().isClientSide || !(entity.level() instanceof ServerLevel level)) return false;
-        if (entity.getY() >= level.getMinY() + 2) return false;
+        if (entity.getY() >= level.getMinBuildHeight() + 2) return false;
 
         CustomData custom = stack.get(DataComponents.CUSTOM_DATA);
         if (custom == null) return false;

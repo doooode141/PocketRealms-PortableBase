@@ -152,12 +152,12 @@ public final class PocketTravel {
                     if (radius > 0 && Math.max(Math.abs(dx), Math.abs(dz)) != radius) continue;
                     for (int dy = 0; dy <= 4; dy++) {
                         double px = origin.getX() + dx + 0.5;
-                        double py = Math.max(level.getMinY() + 1, origin.getY() + dy);
+                        double py = Math.max(level.getMinBuildHeight() + 1, origin.getY() + dy);
                         double pz = origin.getZ() + dz + 0.5;
                         BlockPos feet = BlockPos.containing(px, py, pz);
                         BlockPos floor = feet.below();
                         if (!level.getWorldBorder().isWithinBounds(feet)) continue;
-                        if (py >= level.getMaxY() - 1 || !level.getFluidState(feet).isEmpty()) continue;
+                        if (py >= level.getMaxBuildHeight() - 1 || !level.getFluidState(feet).isEmpty()) continue;
                         if (!level.getBlockState(floor).isSolid()) continue;
                         if (level.noCollision(player, player.getBoundingBox().move(px - player.getX(),
                                 py - player.getY(), pz - player.getZ()))) {
