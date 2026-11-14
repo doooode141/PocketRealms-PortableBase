@@ -250,7 +250,8 @@ public final class PocketTravel {
         for (int dx = wallMin; dx <= wallMax; dx++) {
             for (int dz = wallMin; dz <= wallMax; dz++) {
                 boolean wall = dx == wallMin || dx == wallMax || dz == wallMin || dz == wallMax;
-                if (wall) {
+                boolean doorway = dz == wallMax && dx >= -1 && dx <= 1;
+                if (wall && !doorway) {
                     for (int h = 2; h <= 12; h++) {
                         BlockPos wallPos = new BlockPos(centerX + dx, FLOOR_Y + h, dz);
                         if (level.getBlockState(wallPos).isAir()) {
@@ -267,9 +268,11 @@ public final class PocketTravel {
 
         // Old generated wall blocks at this doorway position are removed only when they
         // are still the original polished-andesite perimeter block.
-        BlockPos doorway = new BlockPos(centerX, FLOOR_Y + 1, wallMax);
-        if (level.getBlockState(doorway).is(Blocks.POLISHED_ANDESITE)) {
-            level.removeBlock(doorway, false);
+        for (int dx = -1; dx <= 1; dx++) {
+            BlockPos doorway = new BlockPos(centerX + dx, FLOOR_Y + 1, wallMax);
+            if (level.getBlockState(doorway).is(Blocks.POLISHED_ANDESITE)) {
+                level.removeBlock(doorway, false);
+            }
         }
 
         BlockPos gateway = new BlockPos(centerX, SPAWN_Y, max - 1);

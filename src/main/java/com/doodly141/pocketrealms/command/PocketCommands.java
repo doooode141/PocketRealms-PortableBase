@@ -1,12 +1,16 @@
 package com.doodly141.pocketrealms.command;
 
 import com.doodly141.pocketrealms.block.PocketAnchorBlockEntity;
+import com.doodly141.pocketrealms.block.ModItems;
 import com.doodly141.pocketrealms.data.PocketWorldData;
 import com.doodly141.pocketrealms.travel.PocketTravel;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.util.List;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -86,6 +90,11 @@ public final class PocketCommands {
             player.sendSystemMessage(Component.literal("That home's anchor is already placed. Duplicate recovery was blocked."));
             return 0;
         }
+        if (hasBoundAnchorInInventory(player, id)) {
+            data.removeRecovery(player.getUUID(), id);
+            player.sendSystemMessage(Component.literal("You already have this home's Pocket Anchor in your inventory."));
+            return 1;
+        }
         ItemStack anchor = PocketAnchorBlockEntity.createBoundItem(player.getUUID(), id,
                 data.getHomeName(player.getUUID(), id));
         if (player.getInventory().add(anchor)) {
@@ -140,6 +149,10 @@ public final class PocketCommands {
                 data.removeRecovery(player.getUUID(), id);
                 continue;
             }
+            if (hasBoundAnchorInInventory(player, id)) {
+                data.removeRecovery(player.getUUID(), id);
+                continue;
+            }
             ItemStack anchor = PocketAnchorBlockEntity.createBoundItem(player.getUUID(), id,
                     data.getHomeName(player.getUUID(), id));
             if (!player.getInventory().add(anchor)) break;
@@ -148,6 +161,18 @@ public final class PocketCommands {
         }
         player.sendSystemMessage(Component.literal("Recovered " + claimed + " Pocket Anchor(s)."));
         return claimed;
+    }
+
+    private static boolean hasBoundAnchorInInventory(ServerPlayer player, int pocketId) {
+        for (ItemStack stack : player.getInventory().items) {
+            if (!stack.is(ModItems.POCKET_ANCHOR.get())) continue;
+            CustomData custom = stack.get(DataComponents.CUSTOM_DATA);
+            if (custom == null) continue;
+            CompoundTag tag = custom.copyTag();
+            if (tag.getInt("pocket_id") == pocketId
+                    && player.getUUID().toString().equals(tag.getString("owner"))) return true;
+        }
+        return false;
     }
 
     private PocketCommands() {}
