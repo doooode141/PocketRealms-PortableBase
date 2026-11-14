@@ -4,12 +4,13 @@ import com.doodly141.pocketrealms.block.ModBlockEntities;
 import com.doodly141.pocketrealms.block.ModBlockTypes;
 import com.doodly141.pocketrealms.block.ModBlocks;
 import com.doodly141.pocketrealms.block.ModItems;
+import com.doodly141.pocketrealms.command.PocketCommands;
+import com.doodly141.pocketrealms.menu.ModMenus;
+import com.doodly141.pocketrealms.protection.PocketProtection;
+import com.doodly141.pocketrealms.protection.PocketSafety;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
-import com.doodly141.pocketrealms.command.PocketCommands;
-import com.doodly141.pocketrealms.protection.PocketProtection;
-import com.doodly141.pocketrealms.protection.PocketSafety;
 
 @Mod(PocketRealms.MOD_ID)
 public final class PocketRealms {
@@ -20,6 +21,7 @@ public final class PocketRealms {
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
+        ModMenus.MENUS.register(modEventBus);
         modEventBus.addListener(ModItems::addCreative);
         NeoForge.EVENT_BUS.addListener(PocketCommands::register);
         NeoForge.EVENT_BUS.addListener(PocketProtection::onBreak);

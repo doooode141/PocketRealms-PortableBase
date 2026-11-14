@@ -1,6 +1,7 @@
 package com.doodly141.pocketrealms.protection;
 
 import com.doodly141.pocketrealms.data.PocketWorldData;
+import com.doodly141.pocketrealms.block.PocketAnchorBlockEntity;
 import com.doodly141.pocketrealms.travel.PocketTravel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -15,6 +16,12 @@ import java.util.UUID;
 public final class PocketProtection {
     public static void onBreak(BlockEvent.BreakEvent event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
+        if (level.getBlockEntity(event.getPos()) instanceof PocketAnchorBlockEntity anchor
+                && anchor.isBound() && !event.getPlayer().getUUID().equals(anchor.getOwner())) {
+            event.setCanceled(true);
+            message(event.getPlayer());
+            return;
+        }
         if (isForeignPlot(level, event.getPos(), event.getPlayer())) {
             event.setCanceled(true);
             message(event.getPlayer());

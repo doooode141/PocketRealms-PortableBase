@@ -1,12 +1,22 @@
 POCKET REALMS - CHANGELOG
 
-0.1.0-alpha
-- First source release.
-- One shared pocket dimension; player pockets are spaced 300 blocks apart.
-- Five pockets per player, each with a 30x30 usable build floor.
-- Bound portable anchors, recovery command, and free in-pocket gateways.
-- Void-fall safety return.
-- Basic per-player plot interaction protection.
-- Cheap vanilla-material recipes.
+0.2.0
+- Preserves the 0.1.0-alpha SavedData keys and existing home IDs.
+- Adds persistent custom home names, home spawn points, active anchor tracking, and recovery mailbox data.
+- Pocket Anchor drops now occur in Survival and Creative through one server-side drop path.
+- Bound anchors validate owner/home identity and reject duplicate active placements.
+- Middle-click copies retain the bound identity; the server rejects a second placement.
+- Creative Pocket Anchor placement consumes one item; Survival uses normal consumption.
+- Anchor item entities resist fire/lava, ordinary damage and despawning; void drops are routed to the owner or mailbox.
+- Replaces gateway cycling with a five-slot dimensional navigator and direct home selection.
+- Adds /pockets list, visit, return, recover, rename, spawn, and mailbox commands.
+- New homes generate a 30x30 floor, 12-block-high walls, roof perimeter, doorway, and lighting.
+- Adds safer return-position checks and fall-distance reset.
+- Reworks names and block models; original 32x32 pixel textures are included.
 
-This alpha source has not yet been compiled or tested in Minecraft.
+Compatibility note:
+Existing generated plots are deliberately not regenerated. Their blocks and player builds are preserved.
+The old owner/return/generated plot SavedData keys remain in place; new fields are additive.
+
+Testing status:
+Compilation must be confirmed by the attached GitHub Actions run. No live in-game test is claimed by this source changelog.

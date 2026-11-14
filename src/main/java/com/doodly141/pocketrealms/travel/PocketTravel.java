@@ -2,7 +2,9 @@ package com.doodly141.pocketrealms.travel;
 
 import com.doodly141.pocketrealms.PocketRealms;
 import com.doodly141.pocketrealms.block.ModBlocks;
+import com.doodly141.pocketrealms.block.PocketAnchorBlockEntity;
 import com.doodly141.pocketrealms.data.PocketWorldData;
+import com.doodly141.pocketrealms.menu.PocketNavigatorMenu;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
@@ -35,41 +37,36 @@ public final class PocketTravel {
             player.sendSystemMessage(Component.literal("You do not own that pocket."));
             return;
         }
-
         ServerLevel pocketLevel = server.getLevel(POCKET_DIMENSION);
         if (pocketLevel == null) {
-            player.sendSystemMessage(Component.literal("Pocket Realm dimension is not loaded. Make sure the mod is installed and restart the world."));
+            player.sendSystemMessage(Component.literal("Pocket Realm dimension is unavailable. Restart the world and check the mod installation."));
             return;
         }
 
-        if (!player.level().dimension().equals(POCKET_DIMENSION)) {
-            data.saveReturnPoint(player);
-        }
-
+        if (!player.serverLevel().dimension().equals(POCKET_DIMENSION)) data.saveReturnPoint(player);
         ensurePlot(pocketLevel, data, pocketId);
-        double x = pocketId * (double) PLOT_SPACING;
-        player.teleportTo(pocketLevel, x + 0.5, SPAWN_Y, 0.5, Set.of(), player.getYRot(), player.getXRot());
-        player.sendSystemMessage(Component.literal("Welcome home — Pocket " + (data.getOwnedPockets(player.getUUID()).indexOf(pocketId) + 1) + "/5."));
+
+        PocketWorldData.HomeSpawn saved = data.getHomeSpawn(pocketId);
+        double x = saved == null ? pocketId * (double) PLOT_SPACING + 0.5 : saved.x();
+        double y = saved == null ? SPAWN_Y : saved.y();
+        double z = saved == null ? 0.5 : saved.z();
+        float yaw = saved == null ? player.getYRot() : saved.yaw();
+        float pitch = saved == null ? player.getXRot() : saved.pitch();
+        if (!isSafePosition(pocketLevel, player, x, y, z)) {
+            x = pocketId * (double) PLOT_SPACING + 0.5;
+            y = SPAWN_Y;
+            z = 0.5;
+        }
+        player.teleportTo(pocketLevel, x, y, z, Set.of(), yaw, pitch);
+        player.fallDistance = 0;
+        player.sendSystemMessage(Component.literal("Welcome home — " + data.getHomeName(player.getUUID(), pocketId) + "."));
     }
 
-    public static void visitNextPocket(ServerPlayer player) {
-        PocketWorldData data = PocketWorldData.get(player.serverLevel());
-        List<Integer> pockets = data.getOwnedPockets(player.getUUID());
-        if (pockets.isEmpty()) {
-            player.sendSystemMessage(Component.literal("You have no Pocket Anchors yet."));
-            return;
-        }
-        int current = nearestPocketId(player.getX(), pockets);
-        int index = pockets.indexOf(current);
-        int next = pockets.get((index + 1 + pockets.size()) % pockets.size());
-        if (next == current) {
-            player.sendSystemMessage(Component.literal("This is your only pocket so far. Craft another Pocket Anchor to make a second home."));
-            return;
-        }
-        enterPocket(player, next);
+    public static void openNavigator(ServerPlayer player) {
+        PocketNavigatorMenu.open(player);
     }
 
-    /** Returns players safely to their nearest home if they fall off a plot into the void. */
+    /** Void rescue without inventory loss or fall damage. */
     public static void rescueFromVoid(ServerPlayer player) {
         if (!player.serverLevel().dimension().equals(POCKET_DIMENSION) || player.getY() > -16.0) return;
         PocketWorldData data = PocketWorldData.get(player.serverLevel());
@@ -80,11 +77,12 @@ public final class PocketTravel {
         }
         int nearest = nearestPocketId(player.getX(), pockets);
         enterPocket(player, nearest);
-        player.sendSystemMessage(Component.literal("Pocket safety net activated. You were returned to your home platform."));
+        player.fallDistance = 0;
+        player.sendSystemMessage(Component.literal("Dimensional safety system returned you to your home."));
     }
 
     public static void returnToLastPlace(ServerPlayer player) {
-        if (!player.level().dimension().equals(POCKET_DIMENSION)) {
+        if (!player.serverLevel().dimension().equals(POCKET_DIMENSION)) {
             player.sendSystemMessage(Component.literal("You are not inside a Pocket Realm."));
             return;
         }
@@ -112,20 +110,71 @@ public final class PocketTravel {
                     pitch = point.pitch();
                 }
             } catch (RuntimeException ignored) {
-                // If the old dimension is unavailable, safely return to the Overworld spawn.
+                // The fallback below uses the Overworld's shared spawn.
             }
         }
 
-        player.teleportTo(target, x, y, z, Set.of(), yaw, pitch);
-        player.sendSystemMessage(Component.literal("Returned from your Pocket Realm."));
+        double[] safe = findSafePosition(target, player, x, y, z);
+        if (safe == null) {
+            target = server.overworld();
+            BlockPos spawn = target.getSharedSpawnPos();
+            safe = findSafePosition(target, player, spawn.getX() + 0.5, spawn.getY() + 1.0, spawn.getZ() + 0.5);
+        }
+        if (safe == null) {
+            player.sendSystemMessage(Component.literal("No safe return point is available yet. Try /spawn or ask an administrator for help."));
+            return;
+        }
+
+        player.teleportTo(target, safe[0], safe[1], safe[2], Set.of(), yaw, pitch);
+        player.fallDistance = 0;
+        player.sendSystemMessage(Component.literal("Returned to your saved entrance location."));
+    }
+
+    public static boolean setHomeSpawn(ServerPlayer player, int pocketId) {
+        if (!player.serverLevel().dimension().equals(POCKET_DIMENSION)) return false;
+        PocketWorldData data = PocketWorldData.get(player.serverLevel());
+        if (!data.ownsPocket(player.getUUID(), pocketId)) return false;
+        int centerX = pocketId * PLOT_SPACING;
+        if (Math.abs(player.getX() - centerX) > 15 || Math.abs(player.getZ()) > 15) return false;
+        data.setHomeSpawn(pocketId, player);
+        return true;
+    }
+
+    private static boolean isSafePosition(ServerLevel level, ServerPlayer player, double x, double y, double z) {
+        return findSafePosition(level, player, x, y, z) != null;
+    }
+
+    private static double[] findSafePosition(ServerLevel level, ServerPlayer player, double x, double y, double z) {
+        BlockPos origin = BlockPos.containing(x, y, z);
+        for (int radius = 0; radius <= 8; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (radius > 0 && Math.max(Math.abs(dx), Math.abs(dz)) != radius) continue;
+                    for (int dy = 0; dy <= 4; dy++) {
+                        double px = origin.getX() + dx + 0.5;
+                        double py = Math.max(level.getMinY() + 1, origin.getY() + dy);
+                        double pz = origin.getZ() + dz + 0.5;
+                        BlockPos feet = BlockPos.containing(px, py, pz);
+                        BlockPos floor = feet.below();
+                        if (!level.getWorldBorder().isWithinBounds(feet)) continue;
+                        if (py >= level.getMaxY() - 1 || !level.getFluidState(feet).isEmpty()) continue;
+                        if (!level.getBlockState(floor).isSolid()) continue;
+                        if (level.noCollision(player, player.getBoundingBox().move(px - player.getX(),
+                                py - player.getY(), pz - player.getZ()))) {
+                            return new double[]{px, py, pz};
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private static int nearestPocketId(double playerX, List<Integer> pockets) {
         int nearest = pockets.getFirst();
         double bestDistance = Double.MAX_VALUE;
         for (int id : pockets) {
-            double centerX = id * (double) PLOT_SPACING;
-            double distance = Math.abs(playerX - centerX);
+            double distance = Math.abs(playerX - id * (double) PLOT_SPACING);
             if (distance < bestDistance) {
                 bestDistance = distance;
                 nearest = id;
@@ -135,30 +184,100 @@ public final class PocketTravel {
     }
 
     private static void ensurePlot(ServerLevel level, PocketWorldData data, int pocketId) {
-        if (data.isPlotGenerated(pocketId)) return;
-        int centerX = pocketId * PLOT_SPACING;
-        int half = PLOT_SIZE / 2;
+        if (data.isPlotGenerated(pocketId)) {
+            if (!data.isPlotEnclosed(pocketId)) upgradeLegacyPlot(level, data, pocketId);
+            return;
+        }
 
-        // The 30x30 usable floor is surrounded by a one-block perimeter wall.
-        for (int dx = -half - 1; dx <= half; dx++) {
-            for (int dz = -half - 1; dz <= half; dz++) {
-                boolean edge = dx == -half - 1 || dx == half || dz == -half - 1 || dz == half;
+        int centerX = pocketId * PLOT_SPACING;
+        int min = -PLOT_SIZE / 2;
+        int max = min + PLOT_SIZE - 1;
+        int wallMin = min - 1;
+        int wallMax = max + 1;
+        int ceilingY = FLOOR_Y + 13;
+
+        // 30x30 editable floor, surrounded by 12-block-high walls and a roof.
+        for (int dx = wallMin; dx <= wallMax; dx++) {
+            for (int dz = wallMin; dz <= wallMax; dz++) {
+                boolean wall = dx == wallMin || dx == wallMax || dz == wallMin || dz == wallMax;
                 BlockPos floor = new BlockPos(centerX + dx, FLOOR_Y, dz);
-                level.setBlock(floor, (edge ? Blocks.POLISHED_ANDESITE : Blocks.SMOOTH_STONE).defaultBlockState(), 3);
-                if (edge) {
-                    level.setBlock(floor.above(), Blocks.POLISHED_ANDESITE.defaultBlockState(), 3);
+                level.setBlock(floor, (wall ? Blocks.POLISHED_DEEPSLATE : Blocks.SMOOTH_STONE).defaultBlockState(), 3);
+
+                // Leave a 3-block-wide doorway in the +Z wall for the free gateway.
+                boolean doorway = dz == wallMax && dx >= -1 && dx <= 1;
+                if (wall && !doorway) {
+                    for (int h = 1; h <= 12; h++) {
+                        BlockPos wallPos = floor.above(h);
+                        level.setBlock(wallPos, Blocks.POLISHED_DEEPSLATE.defaultBlockState(), 3);
+                    }
+                }
+                if (wall) {
                 }
             }
         }
 
-        // A free built-in gateway is included on the front edge of every new plot.
-        level.setBlock(new BlockPos(centerX, SPAWN_Y, half - 2), ModBlocks.POCKET_GATEWAY.get().defaultBlockState(), 3);
-        level.setBlock(new BlockPos(centerX - half + 1, SPAWN_Y, -half + 1), Blocks.LANTERN.defaultBlockState(), 3);
-        level.setBlock(new BlockPos(centerX + half - 2, SPAWN_Y, -half + 1), Blocks.LANTERN.defaultBlockState(), 3);
-        level.setBlock(new BlockPos(centerX - half + 1, SPAWN_Y, half - 2), Blocks.LANTERN.defaultBlockState(), 3);
-        level.setBlock(new BlockPos(centerX + half - 2, SPAWN_Y, half - 2), Blocks.LANTERN.defaultBlockState(), 3);
+        // Fill the entire roof, not just its perimeter, so the generated room is enclosed.
+        for (int dx = wallMin; dx <= wallMax; dx++) {
+            for (int dz = wallMin; dz <= wallMax; dz++) {
+                level.setBlock(new BlockPos(centerX + dx, ceilingY, dz),
+                        Blocks.DEEPSLATE_TILES.defaultBlockState(), 3);
+            }
+        }
+
+        level.setBlock(new BlockPos(centerX, SPAWN_Y, max - 1), ModBlocks.POCKET_GATEWAY.get().defaultBlockState(), 3);
+        level.setBlock(new BlockPos(centerX - 12, SPAWN_Y, -12), Blocks.LANTERN.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(centerX + 12, SPAWN_Y, -12), Blocks.LANTERN.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(centerX - 12, SPAWN_Y, 12), Blocks.LANTERN.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(centerX + 12, SPAWN_Y, 12), Blocks.LANTERN.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(centerX, FLOOR_Y + 12, 0), Blocks.SEA_LANTERN.defaultBlockState(), 3);
 
         data.markPlotGenerated(pocketId);
+        data.markPlotEnclosed(pocketId);
+    }
+
+    /**
+     * One-time, non-destructive shell migration for 0.1.0-alpha homes.
+     * Only air blocks are filled; existing player blocks and machines are left untouched.
+     */
+    private static void upgradeLegacyPlot(ServerLevel level, PocketWorldData data, int pocketId) {
+        int centerX = pocketId * PLOT_SPACING;
+        int min = -PLOT_SIZE / 2;
+        int max = min + PLOT_SIZE - 1;
+        int wallMin = min - 1;
+        int wallMax = max + 1;
+        int ceilingY = FLOOR_Y + 13;
+
+        for (int dx = wallMin; dx <= wallMax; dx++) {
+            for (int dz = wallMin; dz <= wallMax; dz++) {
+                boolean wall = dx == wallMin || dx == wallMax || dz == wallMin || dz == wallMax;
+                if (wall) {
+                    for (int h = 2; h <= 12; h++) {
+                        BlockPos wallPos = new BlockPos(centerX + dx, FLOOR_Y + h, dz);
+                        if (level.getBlockState(wallPos).isAir()) {
+                            level.setBlock(wallPos, Blocks.POLISHED_DEEPSLATE.defaultBlockState(), 3);
+                        }
+                    }
+                }
+                BlockPos roof = new BlockPos(centerX + dx, ceilingY, dz);
+                if (level.getBlockState(roof).isAir()) {
+                    level.setBlock(roof, Blocks.DEEPSLATE_TILES.defaultBlockState(), 3);
+                }
+            }
+        }
+
+        // Old generated wall blocks at this doorway position are removed only when they
+        // are still the original polished-andesite perimeter block.
+        BlockPos doorway = new BlockPos(centerX, FLOOR_Y + 1, wallMax);
+        if (level.getBlockState(doorway).is(Blocks.POLISHED_ANDESITE)) {
+            level.removeBlock(doorway, false);
+        }
+
+        BlockPos gateway = new BlockPos(centerX, SPAWN_Y, max - 1);
+        if (level.getBlockState(gateway).isAir()) {
+            level.setBlock(gateway, ModBlocks.POCKET_GATEWAY.get().defaultBlockState(), 3);
+        }
+
+        data.markPlotEnclosed(pocketId);
     }
 
     private PocketTravel() {}

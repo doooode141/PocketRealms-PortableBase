@@ -1,20 +1,30 @@
-# Pocket Realms (alpha)
+# Pocket Realms 0.2.0
 
-Minecraft 1.21.1 / NeoForge 21.1.265 / Java 21.
+Minecraft Java 1.21.1 · NeoForge 21.1.265 · Java 21
 
-## Features planned in this alpha
+Pocket Realms lets each player carry up to five homes in one shared pocket dimension. Each home has a 30×30 editable floor, and plot centers are spaced 300 blocks apart.
 
-- Five personal pocket plots per player.
-- One shared pocket dimension with plots laid out 300 blocks apart.
-- A 30 x 30 build area for each plot.
-- Portable Pocket Anchors that keep their assigned pocket ID.
-- Pocket Gateways for travel among a player's pockets and return travel.
-- Owner protection, void rescue, and pocket recovery commands.
+## Navigation
 
-## Build on GitHub
+Right-click a Dimension Shift Console (the former Pocket Gateway) to open the five-slot navigator. Select any owned home directly or choose Return to Last Location.
 
-The included GitHub Actions workflow compiles the mod with Java 21 and Gradle 9.2.1. It checks that the Java sources exist and that the resulting JAR contains the Pocket Realms main class before uploading the artifact.
+Commands:
+- /pockets or /pockets list
+- /pockets visit <slot>
+- /pockets return
+- /pockets recover <slot>
+- /pockets rename <slot> <name>
+- /pockets spawn <slot>
+- /pockets mailbox
 
-After uploading the **contents** of this folder to the root of a GitHub repository, open **Actions** and run **Build Pocket Realms**. Download the `PocketRealms-0.1.0-alpha` artifact only after the workflow finishes successfully and its verification step passes.
+## Portable anchors
 
-This is an alpha build. Back up worlds before testing. The mod has not yet been verified in a live Minecraft instance.
+A Pocket Anchor keeps the identity of its original home when broken and replaced. It drops in both Survival and Creative. Creative placement consumes one anchor item. Bound identities are checked on the server to prevent another player or a duplicate from placing the same home twice.
+
+Anchor drops resist ordinary damage, fire/lava, and despawning. If an anchor falls into the void, it is returned to the owner or stored in the persistent recovery mailbox.
+
+## Existing worlds
+
+The update retains the existing pocketrealms_world_data keys (next_pocket_id, owners, returns, and generated_plots). New home names, spawn points, active anchors, and mailbox entries are additive. Existing generated plots are never regenerated, so old player builds are not overwritten.
+
+Back up your world before installing any mod update. The GitHub build checks compilation and packaged mod classes/assets; actual gameplay should still be tested in Minecraft before using it on a valuable world.

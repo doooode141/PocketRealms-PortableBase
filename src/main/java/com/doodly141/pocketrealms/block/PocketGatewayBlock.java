@@ -3,8 +3,6 @@ package com.doodly141.pocketrealms.block;
 import com.mojang.serialization.MapCodec;
 import com.doodly141.pocketrealms.travel.PocketTravel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -27,17 +25,8 @@ public class PocketGatewayBlock extends Block {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
-        if (!(player instanceof ServerPlayer serverPlayer) || !(level instanceof ServerLevel serverLevel)) {
-            return InteractionResult.CONSUME;
-        }
-        if (!serverLevel.dimension().equals(PocketTravel.POCKET_DIMENSION)) {
-            serverPlayer.sendSystemMessage(Component.literal("Pocket Gateways only work inside your Pocket Realm."));
-            return InteractionResult.CONSUME;
-        }
-        if (serverPlayer.isShiftKeyDown()) {
-            PocketTravel.returnToLastPlace(serverPlayer);
-        } else {
-            PocketTravel.visitNextPocket(serverPlayer);
+        if (player instanceof ServerPlayer serverPlayer) {
+            PocketTravel.openNavigator(serverPlayer);
         }
         return InteractionResult.CONSUME;
     }
